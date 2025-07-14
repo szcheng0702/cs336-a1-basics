@@ -1,13 +1,15 @@
 import os
-import re
+import regex as re
 
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
 from typing import BinaryIO
 
-
+MAX_WORKERS = 4
 END_TEXT_TOKEN = '<|endoftext|>'
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+# GPT4_SPLIT_PATTERN = r"""'(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]++[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+"""
 
 def find_chunk_boundaries(
     file: BinaryIO, 
@@ -57,22 +59,18 @@ def find_chunk_boundaries(
     # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
     return sorted(set(chunk_boundaries))
 
-def pretokenize(text: str, special_tokens: list[str], drop_special_token: bool = True) -> list[bytes]:
-    parts = split_by_special_tokens(text, special_tokens)
-
+def pretokenize(text: str, special_tokens:list[str]) -> list[bytes]:
+    # split by special tokens first before pretokenizing
+    pattern = "("+"|".join(re.escape(tok) for tok in special_tokens)+")"
+    parts = re.split(pattern, text)
 
     tokens_list = []
     for part in parts:
-        if part in special_tokens:
-            if not drop_special_token:  # Keep special tokens, otherwise ignore
-                spec_tok_bytes = part.encode('utf-8')
-                tokens_list.append([spec_tok_bytes])
-        else:
-            str_tokens = re.findall(PAT, part)
-            part_tokens = [s.encode('utf-8') for s in str_tokens]
+        if part not in special_tokens:
+            matches = re.finditer(PAT, part)
+            part_tokens = [s.group().encode('utf-8') for s in matches]
             tokens_list.append(part_tokens)
-    tokens = [token for part_tokens in tokens_list for token in part_tokens]
-    return tokens
+    return tokens_list
 
 
 def merge():
@@ -101,18 +99,14 @@ def train_bpe(input_path:str, vocab_size:int, special_tokens:list[str])->tuple[d
             chunk_list.append(chunk)
 
     # Parallelizing pretokenization
-    pretokens_list = []
-    processes = []
-    q = Queue()
-    for chunk in chunk_list:
-        p = Process(target=worker, args=(chunk, special_tokens, q))
-        p.start()
-        processes.append(p)
+    # Use Thread for IO bound task, use ProcessPoolExecutor for CPU-bound task (math)
+    with ThreadPoolExecutor(max_workes=MAX_WORKERS) as executor:
+        futures = [executor.submit(pretokenize, chunk,  special_tokens) for chunk in chunk_list]
+        for future in as_completed(futures):
+            pretokens = future.result()
+            # merge
 
-    pretokens_list = [q.get() for _ in processes]
 
-    for p in processes:
-        p.join()
 
     pretokens = [token for tokens in pretokens_list for token in tokens]
 
