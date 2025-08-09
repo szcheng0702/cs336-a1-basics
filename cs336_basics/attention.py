@@ -32,18 +32,21 @@ def scaled_dot_product_attention(Q:torch.Tensor, K:torch.Tensor, V:torch.Tensor,
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model:int, num_heads:int, max_seq_len: int | None = None, theta: float | None = None):
+    def __init__(self, d_model:int, num_heads:int, max_seq_len: int | None = None, theta: float | None = None, token_positions:torch.Tensor | None = None):
         super().__init__()
         self.d_model_ = d_model
         self.num_heads_ = num_heads
-        self. d_k_ = self.d_model_/num_heads
-        self. d_v_ = self.d_model_/num_heads
+        self. d_k_ = self.d_model_//num_heads
+        self. d_v_ = self.d_model_//num_heads
         self.weight_Q = Linear(self.d_model_,self.d_model_) # h*d_k x d_model
         self.weight_K = Linear(self.d_model_,self.d_model_) # h*d_k x d_model
         self.weight_V = Linear(self.d_model_,self.d_model_) # h*d_v x d_model
         self.weight_O = Linear(self.d_model_,self.d_model_) # d_model x h*d_v
-
-        self.rope = RotaryPositionalEmbedding(theta, self.d_k_, max_seq_len) if theta and max_seq_len else None
+        self.rope = None
+        self.token_positions = None
+        if max_seq_len and theta and token_positions is not None:
+            self.rope = RotaryPositionalEmbedding(theta, self.d_k_, max_seq_len)
+            self.token_positions = token_positions
 
 
         
@@ -54,17 +57,16 @@ class MultiHeadAttention(nn.Module):
         Return:
         Float[Tensor, " ... seq_len d_v"]
         '''
-        Q = einsum(self.weight_Q, x, 'd_k d_model,... queries_seq_len d_model->... queries_seq_len d_k')
-        K = einsum(self.weight_K, x, 'd_k d_model,... kv_seq_len d_model->... kv_seq_len d_k')
-        # b = x.shape[0]
-        # if self.rope:
-        #     # Use rope for Q and K only
-        #     # token positions: Int[Tensor, "... seq_len]
-        #     token_positions = 
-        #     Q = self.rope(Q, token_positions)
-        #     K = self.rope(K, token_positions)
+        Q = self.weight_Q(x)
+        K = self.weight_K(x)
+        b = x.shape[0]
+        if self.rope:
+            # Use rope for Q and K only
+            # token positions: Int[Tensor, "... seq_len]
+            Q = self.rope(Q, self.token_positions)
+            K = self.rope(K, self.token_positions)
 
-        V = einsum(self.weight_V, x, 'd_v d_model,... kv_seq_len d_model->... kv_seq_len d_v')
+        V = self.weight_V(x)
         seq_len = x.shape[-2]
         # mask size: b h queries, keys
         # lower triangular matrix with size queries x keys
@@ -77,6 +79,6 @@ class MultiHeadAttention(nn.Module):
         K = rearrange(K, '... kv_seq_len (h d_k) -> ... h kv_seq_len d_k', h = self.num_heads_)
         V = rearrange(V, '... kv_seq_len (h d_v) -> ... h kv_seq_len d_v', h = self.num_heads_)
         attn = scaled_dot_product_attention(Q,K,V,mask_expanded)
-        return rearrange(attn, '... h kv_seq_len d_v -> ... kv_seq_len (h d_v)')
+        return self.weight_O(rearrange(attn, '... h kv_seq_len d_v -> ... kv_seq_len (h d_v)'))
 
 
