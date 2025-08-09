@@ -8,7 +8,7 @@ class RotaryPositionalEmbedding(nn.Module):
         self.theta_ = theta
         self.d_k_ = d_k
         self.max_seq_len_ = max_seq_len
-        # set R (R: seq_len d_k d_k)
+        # set R (R: max_seq_len d_k d_k)
         self.R = torch.empty(self.max_seq_len_, self.d_k_, self.d_k_,device=device)
         for i in range(self.max_seq_len_):
             R_is = []
