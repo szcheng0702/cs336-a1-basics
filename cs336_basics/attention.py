@@ -38,13 +38,13 @@ class MultiHeadAttention(nn.Module):
         self.num_heads_ = num_heads
         self. d_k_ = self.d_model_//num_heads
         self. d_v_ = self.d_model_//num_heads
-        self.weight_Q = Linear(self.d_model_,self.d_model_) # h*d_k x d_model
-        self.weight_K = Linear(self.d_model_,self.d_model_) # h*d_k x d_model
-        self.weight_V = Linear(self.d_model_,self.d_model_) # h*d_v x d_model
-        self.weight_O = Linear(self.d_model_,self.d_model_) # d_model x h*d_v
+        self.q_proj = Linear(self.d_model_,self.d_model_) # h*d_k x d_model
+        self.k_proj = Linear(self.d_model_,self.d_model_) # h*d_k x d_model
+        self.v_proj = Linear(self.d_model_,self.d_model_) # h*d_v x d_model
+        self.output_proj = Linear(self.d_model_,self.d_model_) # d_model x h*d_v
         self.rope = None
         self.token_positions = None
-        if max_seq_len and theta and token_positions is not None:
+        if max_seq_len and theta:
             self.rope = RotaryPositionalEmbedding(theta, self.d_k_, max_seq_len)
             self.token_positions = token_positions
 
@@ -57,10 +57,10 @@ class MultiHeadAttention(nn.Module):
         Return:
         Float[Tensor, " ... seq_len d_v"]
         '''
-        Q = self.weight_Q(x)
-        K = self.weight_K(x)
+        Q = self.q_proj(x)
+        K = self.k_proj(x)
         b = x.shape[0]
-        V = self.weight_V(x)
+        V = self.v_proj(x)
         seq_len = x.shape[-2]
         # mask size: b h queries, keys
         # lower triangular matrix with size queries x keys
@@ -74,10 +74,12 @@ class MultiHeadAttention(nn.Module):
         if self.rope:
             # Use rope for Q and K only
             # token positions: Int[Tensor, "... seq_len]
+            if self.token_positions is None:
+                self.token_positions = torch.arange(seq_len).repeat(b,1)
             Q = self.rope(Q, self.token_positions)
             K = self.rope(K, self.token_positions)
         V = rearrange(V, '... kv_seq_len (h d_v) -> ... h kv_seq_len d_v', h = self.num_heads_)
         attn = scaled_dot_product_attention(Q,K,V,mask_expanded)
-        return self.weight_O(rearrange(attn, '... h kv_seq_len d_v -> ... kv_seq_len (h d_v)'))
+        return self.output_proj(rearrange(attn, '... h kv_seq_len d_v -> ... kv_seq_len (h d_v)'))
 
 

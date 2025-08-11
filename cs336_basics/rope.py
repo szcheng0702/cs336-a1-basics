@@ -25,7 +25,7 @@ class RotaryPositionalEmbedding(nn.Module):
         '''
         Args:
         x (Float[Tensor, "... seq_len d_k"])
-        token_positions (Int[Tensor, "... seq_len]) (i.e. b x (0... seq_len))
+        token_positions (Int[Tensor, "... seq_len]) (i.e. b x (0... seq_len-1))
         Return:
         Float[Tensor, " ... seq_len d_k"]
         '''

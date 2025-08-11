@@ -14,6 +14,7 @@ from cs336_basics.rms_norm import RMSNorm
 from cs336_basics.positionwise_ff import SwiGLu
 from cs336_basics.rope import RotaryPositionalEmbedding
 from cs336_basics.attention import softmax, scaled_dot_product_attention, MultiHeadAttention
+from cs336_basics.transformer import TransformerBlock
 
 
 
@@ -156,10 +157,10 @@ def run_multihead_self_attention(
         implementation with the given QKV projection weights and input features.
     """
     multihead_self_attention = MultiHeadAttention(d_model,num_heads)
-    multihead_self_attention.weight_Q.weight.data.copy_(q_proj_weight)
-    multihead_self_attention.weight_K.weight.data.copy_(k_proj_weight)
-    multihead_self_attention.weight_V.weight.data.copy_(v_proj_weight)
-    multihead_self_attention.weight_O.weight.data.copy_(o_proj_weight)
+    multihead_self_attention.q_proj.weight.data.copy_(q_proj_weight)
+    multihead_self_attention.k_proj.weight.data.copy_(k_proj_weight)
+    multihead_self_attention.v_proj.weight.data.copy_(v_proj_weight)
+    multihead_self_attention.output_proj.weight.data.copy_(o_proj_weight)
 
     return multihead_self_attention(in_features)
 
@@ -202,10 +203,10 @@ def run_multihead_self_attention_with_rope(
         implementation with the given QKV projection weights and input features.
     """
     multihead_self_attention = MultiHeadAttention(d_model,num_heads,max_seq_len,theta, token_positions)
-    multihead_self_attention.weight_Q.weight.data.copy_(q_proj_weight)
-    multihead_self_attention.weight_K.weight.data.copy_(k_proj_weight)
-    multihead_self_attention.weight_V.weight.data.copy_(v_proj_weight)
-    multihead_self_attention.weight_O.weight.data.copy_(o_proj_weight)
+    multihead_self_attention.q_proj.weight.data.copy_(q_proj_weight)
+    multihead_self_attention.k_proj.weight.data.copy_(k_proj_weight)
+    multihead_self_attention.v_proj.weight.data.copy_(v_proj_weight)
+    multihead_self_attention.output_proj.weight.data.copy_(o_proj_weight)
     return multihead_self_attention(in_features)
 
 
@@ -302,7 +303,9 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    raise NotImplementedError
+    transformer_block = TransformerBlock(d_model,num_heads,d_ff,max_seq_len,theta)
+    transformer_block.load_state_dict(weights)
+    return transformer_block(in_features)
 
 
 def run_transformer_lm(
