@@ -60,23 +60,22 @@ class MultiHeadAttention(nn.Module):
         Q = self.weight_Q(x)
         K = self.weight_K(x)
         b = x.shape[0]
-        if self.rope:
-            # Use rope for Q and K only
-            # token positions: Int[Tensor, "... seq_len]
-            Q = self.rope(Q, self.token_positions)
-            K = self.rope(K, self.token_positions)
-
         V = self.weight_V(x)
         seq_len = x.shape[-2]
         # mask size: b h queries, keys
         # lower triangular matrix with size queries x keys
-        mask = torch.tril(torch.ones(seq_len,seq_len),diagonal=-1).bool()
+        mask = torch.tril(torch.ones(seq_len,seq_len)).bool()
         # broad cast to b h queries, keys
         mask_expanded = rearrange(mask, 'queries keys -> 1 1 queries keys').expand(b, self.num_heads_, seq_len, seq_len)
 
         # rearrange multiple head
         Q = rearrange(Q, '... queries_seq_len (h d_k) -> ... h queries_seq_len d_k', h = self.num_heads_)
         K = rearrange(K, '... kv_seq_len (h d_k) -> ... h kv_seq_len d_k', h = self.num_heads_)
+        if self.rope:
+            # Use rope for Q and K only
+            # token positions: Int[Tensor, "... seq_len]
+            Q = self.rope(Q, self.token_positions)
+            K = self.rope(K, self.token_positions)
         V = rearrange(V, '... kv_seq_len (h d_v) -> ... h kv_seq_len d_v', h = self.num_heads_)
         attn = scaled_dot_product_attention(Q,K,V,mask_expanded)
         return self.weight_O(rearrange(attn, '... h kv_seq_len d_v -> ... kv_seq_len (h d_v)'))
