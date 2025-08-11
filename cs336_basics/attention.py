@@ -32,20 +32,20 @@ def scaled_dot_product_attention(Q:torch.Tensor, K:torch.Tensor, V:torch.Tensor,
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model:int, num_heads:int, max_seq_len: int | None = None, theta: float | None = None, token_positions:torch.Tensor | None = None):
+    def __init__(self, d_model:int, num_heads:int, max_seq_len: int | None = None, theta: float | None = None, token_positions:torch.Tensor | None = None, device = None, dtype = None):
         super().__init__()
         self.d_model_ = d_model
         self.num_heads_ = num_heads
         self. d_k_ = self.d_model_//num_heads
         self. d_v_ = self.d_model_//num_heads
-        self.q_proj = Linear(self.d_model_,self.d_model_) # h*d_k x d_model
-        self.k_proj = Linear(self.d_model_,self.d_model_) # h*d_k x d_model
-        self.v_proj = Linear(self.d_model_,self.d_model_) # h*d_v x d_model
-        self.output_proj = Linear(self.d_model_,self.d_model_) # d_model x h*d_v
+        self.q_proj = Linear(self.d_model_,self.d_model_, device=device, dtype=dtype) # h*d_k x d_model
+        self.k_proj = Linear(self.d_model_,self.d_model_, device=device, dtype=dtype) # h*d_k x d_model
+        self.v_proj = Linear(self.d_model_,self.d_model_, device=device, dtype=dtype) # h*d_v x d_model
+        self.output_proj = Linear(self.d_model_,self.d_model_, device=device, dtype=dtype) # d_model x h*d_v
         self.rope = None
         self.token_positions = None
         if max_seq_len and theta:
-            self.rope = RotaryPositionalEmbedding(theta, self.d_k_, max_seq_len)
+            self.rope = RotaryPositionalEmbedding(theta, self.d_k_, max_seq_len, device = device)
             self.token_positions = token_positions
 
 
