@@ -13,9 +13,12 @@ from cs336_basics.embedding import Embedding
 from cs336_basics.rms_norm import RMSNorm
 from cs336_basics.positionwise_ff import SwiGLu
 from cs336_basics.rope import RotaryPositionalEmbedding
-from cs336_basics.attention import softmax, scaled_dot_product_attention, MultiHeadAttention
-from cs336_basics.transformer import TransformerBlock
-
+from cs336_basics.attention import (
+    softmax,
+    scaled_dot_product_attention,
+    MultiHeadAttention,
+)
+from cs336_basics.transformer import TransformerBlock, TransformerLM
 
 
 def run_linear(
@@ -32,11 +35,11 @@ def run_linear(
         out_dim (int): The size of the output dimension
         weights (Float[Tensor, "d_out d_in"]): The linear weights to use
         in_features (Float[Tensor, "... d_in"]): The output tensor to apply the function to
-    
+
     Returns:
         Float[Tensor, "... d_out"]: The transformed output of your linear module.
     """
-    ll = Linear(d_in,d_out)
+    ll = Linear(d_in, d_out)
     ll.weight.data.copy_(weights)
 
     return ll(in_features)
@@ -56,12 +59,12 @@ def run_embedding(
         d_model (int): The size of the embedding dimension
         weights (Float[Tensor, "vocab_size d_model"]): The embedding vectors to fetch from
         token_ids (Int[Tensor, "..."]): The set of token ids to fetch from the Embedding layer
-    
+
     Returns:
         Float[Tensor, "... d_model"]: Batch of embeddings returned by your Embedding layer.
     """
 
-    emb = Embedding(vocab_size,d_model)
+    emb = Embedding(vocab_size, d_model)
     emb.weight.data.copy_(weights)
     return emb(token_ids)
 
@@ -122,7 +125,7 @@ def run_scaled_dot_product_attention(
     Returns:
         Float[Tensor, " ... queries d_v"]: Output of SDPA
     """
-    return scaled_dot_product_attention(Q,K,V,mask)
+    return scaled_dot_product_attention(Q, K, V, mask)
 
 
 def run_multihead_self_attention(
@@ -156,7 +159,7 @@ def run_multihead_self_attention(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    multihead_self_attention = MultiHeadAttention(d_model,num_heads)
+    multihead_self_attention = MultiHeadAttention(d_model, num_heads)
     multihead_self_attention.q_proj.weight.data.copy_(q_proj_weight)
     multihead_self_attention.k_proj.weight.data.copy_(k_proj_weight)
     multihead_self_attention.v_proj.weight.data.copy_(v_proj_weight)
@@ -202,7 +205,9 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    multihead_self_attention = MultiHeadAttention(d_model,num_heads,max_seq_len,theta, token_positions)
+    multihead_self_attention = MultiHeadAttention(
+        d_model, num_heads, max_seq_len, theta, token_positions
+    )
     multihead_self_attention.q_proj.weight.data.copy_(q_proj_weight)
     multihead_self_attention.k_proj.weight.data.copy_(k_proj_weight)
     multihead_self_attention.v_proj.weight.data.copy_(v_proj_weight)
@@ -229,9 +234,10 @@ def run_rope(
     Returns:
         Float[Tensor, " ... sequence_length d_k"]: Tensor with RoPEd input.
     """
-    rope = RotaryPositionalEmbedding(theta,d_k,max_seq_len)
+    rope = RotaryPositionalEmbedding(theta, d_k, max_seq_len)
 
-    return rope(in_query_or_key,token_positions)
+    return rope(in_query_or_key, token_positions)
+
 
 def run_transformer_block(
     d_model: int,
@@ -303,7 +309,7 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    transformer_block = TransformerBlock(d_model,num_heads,d_ff,max_seq_len,theta)
+    transformer_block = TransformerBlock(d_model, num_heads, d_ff, max_seq_len, theta)
     transformer_block.load_state_dict(weights)
     return transformer_block(in_features)
 
@@ -333,7 +339,7 @@ def run_transformer_lm(
             evenly divisible by `num_heads`.
         d_ff (int): Dimensionality of the feed-forward inner layer (section 3.3).
         rope_theta (float): The RoPE $\Theta$ parameter.
-        weights (dict[str, Tensor]): 
+        weights (dict[str, Tensor]):
             State dict of our reference implementation. {num_layers} refers to an
             integer between `0` and `num_layers - 1` (the layer index).
             The keys of this dictionary are:
@@ -387,7 +393,17 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    model = TransformerLM(
+        vocab_size,
+        context_length,
+        d_model,
+        num_layers,
+        num_heads,
+        d_ff,
+        theta=rope_theta,
+    )
+    model.load_state_dict(weights)
+    return model(in_indices)
 
 
 def run_rmsnorm(
@@ -467,10 +483,12 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
         softmax normalizing the specified `dim`.
     """
 
-    return softmax(in_features,dim)
+    return softmax(in_features, dim)
 
 
-def run_cross_entropy(inputs: Float[Tensor, " batch_size vocab_size"], targets: Int[Tensor, " batch_size"]) -> Float[Tensor, ""]:
+def run_cross_entropy(
+    inputs: Float[Tensor, " batch_size vocab_size"], targets: Int[Tensor, " batch_size"]
+) -> Float[Tensor, ""]:
     """Given a tensor of inputs and targets, compute the average cross-entropy
     loss across examples.
 
@@ -486,7 +504,9 @@ def run_cross_entropy(inputs: Float[Tensor, " batch_size vocab_size"], targets: 
     raise NotImplementedError
 
 
-def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float) -> None:
+def run_gradient_clipping(
+    parameters: Iterable[torch.nn.Parameter], max_l2_norm: float
+) -> None:
     """Given a set of parameters, clip their combined gradients to have l2 norm at most max_l2_norm.
 
     Args:
