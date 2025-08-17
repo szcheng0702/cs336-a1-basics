@@ -28,7 +28,7 @@ class RotaryPositionalEmbedding(nn.Module):
         Return:
         Float[Tensor, " ... seq_len d_k"]
         """
-        rotation = self.R[token_positions]
+        rotation = self.R[token_positions]  # rotation: b seq_len d_k d_k
         return einsum(
             rotation,
             x,
