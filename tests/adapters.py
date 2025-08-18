@@ -8,7 +8,8 @@ from jaxtyping import Float, Int
 import numpy.typing as npt
 import torch
 from torch import Tensor
-from cs336_basics.linear import Linear
+
+from cs336_basics.adamw import AdamW
 from cs336_basics.attention import (
     softmax,
     scaled_dot_product_attention,
@@ -16,6 +17,7 @@ from cs336_basics.attention import (
 )
 from cs336_basics.cross_entropy import cross_entropy
 from cs336_basics.embedding import Embedding
+from cs336_basics.linear import Linear
 from cs336_basics.positionwise_ff import SwiGLu
 from cs336_basics.rms_norm import RMSNorm
 from cs336_basics.rope import RotaryPositionalEmbedding
@@ -523,7 +525,7 @@ def get_adamw_cls() -> type[torch.optim.Optimizer]:
     """
     Returns a torch.optim.Optimizer that implements AdamW.
     """
-    raise NotImplementedError
+    return AdamW
 
 
 def run_get_lr_cosine_schedule(

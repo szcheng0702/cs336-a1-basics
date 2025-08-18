@@ -1,11 +1,6 @@
 import torch
-import torch.nn as nn
-import math
-from einops import einsum, rearrange
 from jaxtyping import Float, Int
 from torch import Tensor
-from .linear import Linear
-from .rope import RotaryPositionalEmbedding
 
 
 def cross_entropy(
