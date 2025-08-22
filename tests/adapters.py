@@ -18,6 +18,7 @@ from cs336_basics.attention import (
 from cs336_basics.cross_entropy import cross_entropy
 from cs336_basics.embedding import Embedding
 from cs336_basics.linear import Linear
+from cs336_basics.lr import cosine_lr
 from cs336_basics.positionwise_ff import SwiGLu
 from cs336_basics.rms_norm import RMSNorm
 from cs336_basics.rope import RotaryPositionalEmbedding
@@ -553,7 +554,9 @@ def run_get_lr_cosine_schedule(
     Returns:
         Learning rate at the given iteration under the specified schedule.
     """
-    raise NotImplementedError
+    return cosine_lr(
+        it, min_learning_rate, max_learning_rate, warmup_iters, cosine_cycle_iters
+    )
 
 
 def run_save_checkpoint(
