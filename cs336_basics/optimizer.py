@@ -1,6 +1,6 @@
 import torch
 import math
-from typing import Callable, Optional
+from typing import Callable, Iterable, Optional
 
 
 class AdamW(torch.optim.Optimizer):
@@ -53,3 +53,44 @@ class AdamW(torch.optim.Optimizer):
                 state["v"] = v  # store second moment
 
         return loss
+
+
+def cosine_lr(
+    it: int,
+    min_learning_rate: float,
+    max_learning_rate: float,
+    warmup_iters: int,
+    cosine_cycle_iters: int,
+):
+    if it < warmup_iters:
+        return it / warmup_iters * max_learning_rate
+    if warmup_iters <= it and it <= cosine_cycle_iters:
+        return min_learning_rate + 0.5 * (
+            1
+            + math.cos(
+                (it - warmup_iters) * math.pi / (cosine_cycle_iters - warmup_iters)
+            )
+        ) * (max_learning_rate - min_learning_rate)
+    # t > cosine_cycle_iters
+    return min_learning_rate
+
+
+def gradient_clipping(
+    parameters: Iterable[torch.nn.Parameter], max_l2_norm: float, eps: float = 1e-6
+) -> None:
+    """Given a set of parameters, clip their combined gradients to have l2 norm at most max_l2_norm.
+
+    Args:
+        parameters (Iterable[torch.nn.Parameter]): collection of trainable parameters.
+        max_l2_norm (float): a positive value containing the maximum l2-norm.
+
+    The gradients of the parameters (parameter.grad) should be modified in-place.
+    """
+
+    all_gradients = [torch.norm(p.grad) for p in parameters if p.grad is not None]
+    total_norm = torch.norm(torch.stack(all_gradients))
+    if total_norm < max_l2_norm:
+        return
+    for p in parameters:
+        if p.grad is not None:
+            p.grad.mul_(max_l2_norm / (total_norm + eps))

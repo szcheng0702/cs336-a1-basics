@@ -9,7 +9,6 @@ import numpy.typing as npt
 import torch
 from torch import Tensor
 
-from cs336_basics.adamw import AdamW
 from cs336_basics.attention import (
     softmax,
     scaled_dot_product_attention,
@@ -18,7 +17,7 @@ from cs336_basics.attention import (
 from cs336_basics.cross_entropy import cross_entropy
 from cs336_basics.embedding import Embedding
 from cs336_basics.linear import Linear
-from cs336_basics.lr import cosine_lr
+from cs336_basics.optimizer import AdamW, cosine_lr, gradient_clipping
 from cs336_basics.positionwise_ff import SwiGLu
 from cs336_basics.rms_norm import RMSNorm
 from cs336_basics.rope import RotaryPositionalEmbedding
@@ -519,7 +518,7 @@ def run_gradient_clipping(
 
     The gradients of the parameters (parameter.grad) should be modified in-place.
     """
-    raise NotImplementedError
+    gradient_clipping(parameters, max_l2_norm)
 
 
 def get_adamw_cls() -> type[torch.optim.Optimizer]:
