@@ -70,8 +70,10 @@ def pretokenize(text: str, special_tokens: list[str]) -> list[bytes]:
             # skip special tokens
             continue
         matches = re.finditer(PAT, part)
+        a = [s.group().encode("utf-8") for s in matches]
         part_tokens = [s.group().encode("utf-8") for s in matches]
-        tokens_list.append(part_tokens)
+        for t in part_tokens:
+            tokens_list.extend(bytes([b]) for b in t)
     return tokens_list
 
 
@@ -183,12 +185,9 @@ def train_bpe(
         ]
         for future in as_completed(futures):
             pretokens = future.result()
-            all_pretokens.append(pretokens)
+            all_pretokens.extend(pretokens)
 
     # Merging
-    import pdb
-
-    pdb.set_trace()
     counts = defaultdict(int)
     index_dict = defaultdict(set)  # Store pretoken location for each pair
 
@@ -211,9 +210,7 @@ def train_bpe(
 
         index1, index2 = max_pair
         new_index = 256 + len(special_tokens) + i
-        import pdb
 
-        pdb.set_trace()
         vocab[new_index] = vocab[index1] + vocab[index2]
         merge(counts, index_dict, all_pretokens, max_pair, new_index)
         merges.append((vocab[index1], vocab[index2]))
