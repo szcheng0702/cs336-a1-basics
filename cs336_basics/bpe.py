@@ -70,10 +70,7 @@ def pretokenize(text: str, special_tokens: list[str]) -> list[bytes]:
             # skip special tokens
             continue
         matches = re.finditer(PAT, part)
-        a = [s.group().encode("utf-8") for s in matches]
-        part_tokens = [s.group().encode("utf-8") for s in matches]
-        for t in part_tokens:
-            tokens_list.extend(bytes([b]) for b in t)
+        tokens_list.extend([s.group().encode("utf-8") for s in matches])
     return tokens_list
 
 
@@ -85,17 +82,19 @@ def merge(counts, index_dict, all_pretokens, max_pair, new_index) -> None:
         n = len(pretoken)
         # update
         j = 0
+        # Replace max_pair with new_index in each pretoken
         while j < n:
             if j < n - 1 and (pretoken[j], pretoken[j + 1]) == max_pair:
                 new_pretoken.append(new_index)
                 pos_list.append(len(new_pretoken) - 1)
-                j += 1
+                j += 2
             else:
                 new_pretoken.append(pretoken[j])
                 j += 1
 
         # update affected pairs
         for pos in pos_list:
+            counts[max_pair] -= 1
             # updated the pair for [prev_token, max_pair[0]]
             if pos > 0:
                 # delete old
@@ -188,6 +187,7 @@ def train_bpe(
             all_pretokens.extend(pretokens)
 
     # Merging
+
     counts = defaultdict(int)
     index_dict = defaultdict(set)  # Store pretoken location for each pair
 
@@ -198,19 +198,17 @@ def train_bpe(
             index_dict[p].add(j)
 
     for i in range(num_merges):
-        # Prefer lexicographically greater pair
-        # Example: max([("A", "B"), ("A", "C"), ("B", "ZZ"), ("BA", "A")]) = ('BA', 'A')
         max_pair = max(
             counts.items(),
             key=lambda x: (
                 x[1],
-                x[0],
+                vocab[x[0][0]].decode("utf-8", errors="ignore"),
+                vocab[x[0][1]].decode("utf-8", errors="ignore"),
             ),
         )[0]
 
         index1, index2 = max_pair
         new_index = 256 + len(special_tokens) + i
-
         vocab[new_index] = vocab[index1] + vocab[index2]
         merge(counts, index_dict, all_pretokens, max_pair, new_index)
         merges.append((vocab[index1], vocab[index2]))
