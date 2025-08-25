@@ -93,8 +93,9 @@ def merge(counts, index_dict, all_pretokens, max_pair, new_index) -> None:
                 j += 1
 
         # update affected pairs
+        counts.pop(max_pair, None)  # No more max_pair, it's merged
+        index_dict.pop(max_pair, None)
         for pos in pos_list:
-            counts[max_pair] -= 1
             # updated the pair for [prev_token, max_pair[0]]
             if pos > 0:
                 # delete old
