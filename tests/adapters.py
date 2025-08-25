@@ -14,6 +14,7 @@ from cs336_basics.attention import (
     scaled_dot_product_attention,
     MultiHeadAttention,
 )
+from cs336_basics.bpe import train_bpe
 from cs336_basics.cross_entropy import cross_entropy
 from cs336_basics.embedding import Embedding
 from cs336_basics.linear import Linear
@@ -648,4 +649,4 @@ def run_train_bpe(
                 representing that <token1> was merged with <token2>.
                 Merges are ordered by order of creation.
     """
-    raise NotImplementedError
+    return train_bpe(input_path, vocab_size, special_tokens)
