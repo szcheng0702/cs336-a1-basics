@@ -1,7 +1,9 @@
+from typing import Any
+
 import torch
 import torch.nn as nn
+
 from .linear import Linear
-from typing import Any
 
 
 class SwiGLu(nn.Module):

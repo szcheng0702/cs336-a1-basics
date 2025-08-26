@@ -1,6 +1,7 @@
-import torch
 import math
 from typing import Callable, Iterable, Optional
+
+import torch
 
 
 class AdamW(torch.optim.Optimizer):

@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import os
-from typing import IO, Any, BinaryIO
 from collections.abc import Iterable
-from jaxtyping import Float, Int
+from typing import IO, Any, BinaryIO
 
 import numpy.typing as npt
 import torch
+from jaxtyping import Float, Int
 from torch import Tensor
 
 from cs336_basics.attention import (
-    softmax,
-    scaled_dot_product_attention,
     MultiHeadAttention,
+    scaled_dot_product_attention,
+    softmax,
 )
 from cs336_basics.bpe import train_bpe
 from cs336_basics.cross_entropy import cross_entropy

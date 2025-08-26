@@ -1,10 +1,10 @@
 import os
-import regex as re
-
-from concurrent.futures import as_completed
-from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import BinaryIO
+
+import regex as re
+from tqdm import tqdm
 
 MAX_WORKERS = 8
 END_TEXT_TOKEN = "<|endoftext|>"
@@ -198,7 +198,7 @@ def train_bpe(
             counts[p] += 1
             index_dict[p].add(j)
 
-    for i in range(num_merges):
+    for i in tqdm(range(num_merges)):
         max_pair = max(
             counts.items(),
             key=lambda x: (
@@ -215,3 +215,10 @@ def train_bpe(
         merges.append((vocab[index1], vocab[index2]))
 
     return vocab, merges
+
+
+if __name__ == "__main__":
+    input_path = "./data/TinyStoriesV2-GPT4-valid.txt"
+    vocab_size = int(1e4)
+    special_tokens = "<|endoftext|>"
+    vocab, merges = train_bpe(input_path, vocab_size, special_tokens, MAX_WORKERS)
