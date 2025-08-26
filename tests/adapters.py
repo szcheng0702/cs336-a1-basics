@@ -14,7 +14,7 @@ from cs336_basics.attention import (
     scaled_dot_product_attention,
     softmax,
 )
-from cs336_basics.bpe import train_bpe
+from cs336_basics.bpe import Tokenizer
 from cs336_basics.cross_entropy import cross_entropy
 from cs336_basics.embedding import Embedding
 from cs336_basics.linear import Linear
@@ -22,6 +22,7 @@ from cs336_basics.optimizer import AdamW, cosine_lr, gradient_clipping
 from cs336_basics.positionwise_ff import SwiGLu
 from cs336_basics.rms_norm import RMSNorm
 from cs336_basics.rope import RotaryPositionalEmbedding
+from cs336_basics.train_bpe import train_bpe
 from cs336_basics.transformer import TransformerBlock, TransformerLM
 
 
@@ -619,7 +620,7 @@ def get_tokenizer(
     Returns:
         A BPE tokenizer that uses the provided vocab, merges, and special tokens.
     """
-    raise NotImplementedError
+    return Tokenizer(vocab, merges, special_tokens)
 
 
 def run_train_bpe(
