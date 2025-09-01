@@ -59,7 +59,9 @@ def find_chunk_boundaries(
     return sorted(set(chunk_boundaries))
 
 
-def pretokenize(text: str, special_tokens: list[str]) -> list[bytes]:
+def pretokenize(
+    text: str, special_tokens: list[str], keep_special_tokens=False
+) -> list[bytes]:
     # split by special tokens first before pretokenizing
     pattern = "(" + "|".join(re.escape(tok) for tok in special_tokens) + ")"
     parts = re.split(pattern, text)
@@ -67,8 +69,11 @@ def pretokenize(text: str, special_tokens: list[str]) -> list[bytes]:
     tokens_list = []
     for part in parts:
         if part in special_tokens:
-            # skip special tokens
-            continue
+            if keep_special_tokens:
+                tokens_list.append(part.encode("utf-8"))
+            else:
+                # skip special tokens
+                continue
         matches = re.finditer(PAT, part)
         tokens_list.extend([s.group().encode("utf-8") for s in matches])
     return tokens_list
@@ -188,7 +193,6 @@ def train_bpe(
             all_pretokens.extend(pretokens)
 
     # Merging
-
     counts = defaultdict(int)
     index_dict = defaultdict(set)  # Store pretoken location for each pair
 

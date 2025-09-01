@@ -4,6 +4,8 @@ from typing import Iterable, Iterator
 import numpy as np
 import torch
 
+from cs336_basics.train_bpe import pretokenize
+
 
 class Tokenizer:
     def __init__(
@@ -28,8 +30,11 @@ class Tokenizer:
             A BPE tokenizer that uses the provided vocab, merges, and special tokens.
         """
         self.vocab = vocab
+        # map from vocab to token id
+        self.vocab_reversed = {v: k for k, v in self.vocab.items()}
         self.merges = merges
-        self.special_tokens = special_tokens
+        # sort special tokens in terms of decreasing order of length
+        self.special_tokens = sorted(special_tokens, key=len, reverse=True)
 
     @classmethod
     def from_files(
@@ -45,10 +50,11 @@ class Tokenizer:
         return cls(vocab, merges, special_tokens)
 
     def encode(self, text: str) -> list[int]:
-        raise NotImplementedError
+        pretokens = pretokenize(text, self.special_tokens, keep_special_tokens=True)
 
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
-        raise NotImplementedError
+        for it in iterable:
+            yield from self.encode(it)
 
     def decode(self, ids: list[int]) -> str:
         raise NotImplementedError
