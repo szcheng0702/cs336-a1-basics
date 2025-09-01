@@ -6,6 +6,8 @@ import torch
 
 from cs336_basics.train_bpe import pretokenize
 
+REPLACEMENT_CHAR = "\ufffd"
+
 
 class Tokenizer:
     def __init__(
@@ -50,11 +52,32 @@ class Tokenizer:
         return cls(vocab, merges, special_tokens)
 
     def encode(self, text: str) -> list[int]:
-        pretokens = pretokenize(text, self.special_tokens, keep_special_tokens=True)
+        tokens_list = pretokenize(text, self.special_tokens, keep_special_tokens=True)
+        for tokens in tokens_list:
+            for p in self.merges:
+                new_token = p[0] + p[1]
+                i = 0
+                new_tokens = []
+                while i < len(tokens):
+                    if i < len(tokens) - 1 and (tokens[i], tokens[i + 1]) == p:
+                        i += 2
+                        new_tokens.append(new_token)
+                    else:
+                        i += 1
+                        new_tokens.append(tokens[i])
+                tokens = new_tokens
+        # note that at this point all items in tokens have already being merged
+        return [self.vocab_reversed[tokens] for tokens in tokens_list]
 
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
         for it in iterable:
             yield from self.encode(it)
 
     def decode(self, ids: list[int]) -> str:
-        raise NotImplementedError
+        tokens = bytes()
+        for id in ids:
+            if id < len(self.vocab):
+                tokens += self.vocab(id)
+            else:
+                tokens += REPLACEMENT_CHAR.encode("utf-8")
+        return tokens.decode("utf-8", errors="replace")
