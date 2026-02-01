@@ -22,7 +22,7 @@ class RMSNorm(nn.Module):
         in_dtype = x.dtype
         x = x.to(torch.float32)
         squared_norm = reduce(x**2, "... d_model -> ... 1", "sum")
-        # or: squared_norm = torch.sqrt(torch.mean(x ** 2, dim=-1, keepdim=True)
+        # or: squared_norm = torch.sum(x**2, dim=-1, keepdim=True)
         rms = torch.sqrt(1 / self.d_model_ * squared_norm + self.eps_)
         result = einsum(
             x / rms, self.weight, "... d_model, d_model -> ... d_model"
